@@ -30,12 +30,30 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env.local
+.env.*.local
+!.env.example
 
 # vercel
 .vercel
 
+# database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# local dev artifacts
+dev-server.log
+
+# drizzle
+drizzle/meta/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# codebuddy local data (personal, not for sharing)
+.codebuddy/

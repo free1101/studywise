@@ -1,0 +1,1 @@
+{"sessionId":"test-session-001","title":"React 学习笔记","summary":"本次学习了 React 基础。","reviewQuestions":[{"question":"React 是什么？","answer":"React 是构建用户界面的库。"}],"annotations":[{"quote":"React 是一个用于构建用户界面的 JavaScript 库","body":"什么是虚拟 DOM?","type":"question","aiReply":"虚拟 DOM 是..."}],"contentHtml":"<h1>测试内容</h1><p>React 是一个用于构建用户界面的 JavaScript 库。</p>"}

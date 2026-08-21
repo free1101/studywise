@@ -1,0 +1,149 @@
+1.保存提问或者笔记的时候允许键盘的回车键直接保存
+2.中间的网页中建立的笔记或者提问应该用不同的标记显示在批注详情里，并且应该在中间的讲解网页里也有显示。并且中间讲解页面和右边批注页面的滑动应该彼此按照批注的位置同步。
+3.
+
+---
+
+# 结构化任务清单
+
+> 状态：`[待处理]` → `[已完成]`
+
+## Q6. [已完成] 批注输入支持回车键直接保存（前端）
+- 现象/需求：在选中文字后的批注输入框（AnnotationPopup）中，用户希望按回车键直接保存，无需点击保存按钮。
+- 处理（已完成 2026-08-21）：`components/content/AnnotationPopup.tsx` 的 Textarea 增加 `onKeyDown`：Enter 且非 Shift 且非输入法组合状态（`e.nativeEvent.isComposing`）时 `preventDefault` + `handleSave()`；Shift+Enter 仍换行。tsc 与 lint 均 0 错误。
+- 负责：frontend-dev
+
+## Q7. [已完成] 中间讲解网页显示批注标记 + 详情区分笔记/问题（前端）
+- 现象/需求：
+  1. 中间讲解网页（ContentViewer）中建立的笔记/问题应能直接在讲解内容里看到（高亮标记），且笔记与问题用不同颜色区分。
+  2. 右侧批注详情中笔记与问题应有清晰不同的视觉标记（现有 Badge 基础上强化，如不同底色/边框/图标颜色）。
+- 处理（组件部分已完成 2026-08-21；page.tsx 接线归 ux-dev Q8 一起做）：
+  1. `app/page.tsx` 将 `annotations` 与 `selectedAnnotation` 传给 `ContentViewer`。（ux-dev）
+  2. `components/content/ContentViewer.tsx`：新增 props `annotations`/`selectedAnnotationId`；useEffect + TreeWalker 按 quoteOffset/quoteLength 定位文本节点，包裹 `<mark data-annotation-id data-annotation-type>`（问题=黄 `bg-yellow-200/70`、笔记=绿 `bg-emerald-200/70`）；annotations 变化时先 clearHighlights 再重新应用；selectedAnnotationId 对应 mark 加 `data-selected` + ring 高亮；quote 文本做兜底匹配；现有 handleMouseUp 弹窗逻辑未破坏。
+  3. `components/annotation/AnnotationItem.tsx`：强化笔记/问题视觉区分（卡片左侧色条 border-l-yellow/emerald + Badge 不同底色/边框/图标色）。
+- 负责：frontend-dev
+
+## Q8. [已完成] 中间讲解页与右侧批注详情按批注位置双向滚动同步（交互）
+- 现象/需求：中间讲解页面与右侧批注详情页面的滚动应彼此按批注位置同步。
+- 处理（契约依赖 Q7 的 `data-annotation-id` / `data-annotation-type`）：
+  1. `app/page.tsx` 中间内容容器加 `ref` + `onScroll`（`handleMiddleScroll`），遍历容器内 `mark[data-annotation-id]` 找到当前视口内命中的批注，联动右侧滚动到对应批注项（`AnnotationDetail` 通过 `forwardRef` 暴露 `scrollToAnnotation(id)`）。
+  2. 点击右侧批注项（`handleSelectAnnotation`）→ 更新选中态 + 中间 `scrollIntoView`（`scrollMiddleToAnnotation`）高亮选中态（依赖 Q7 的 selectedAnnotationId）。
+  3. 右侧列表滚动 → `AnnotationDetail` 通过 `onVisibleAnnotationChange(id)` 上报当前可见批注 → 反向联动中间。双向均用程序滚动标志 + 防抖计时（400ms）防循环。
+- 负责：ux-dev（改 `app/page.tsx`、`components/annotation/AnnotationDetail.tsx`；不改 ContentViewer 高亮逻辑）
+- 结果：Q8 完成；Q7 的 page.tsx 接线部分（ContentViewer 传 `annotations`/`selectedAnnotationId`）由 ux-dev 完成，组件侧（ContentViewer 高亮渲染、AnnotationItem 视觉区分）由 frontend-dev 负责。
+
+
+
+1.中间讲解页的写的笔记或问题批注在鼠标点击的时候 右侧批注页应该定位到相应位置，反之也是
+2.用滚轮看中间讲解页的时候右侧批注页也应该根据当前页的批注位置相应自动滚动，反之页是
+3.在批注页应该可以在AI解释的位置继续追加提问  问完后自动折叠只留下AI的第一个回答
+
+---
+
+# 追加意见（2026-08-21 第三轮）
+
+## Q13. [已完成] 点击中间高亮批注，右侧批注栏不定位（前端）
+- 现象/需求：用户反馈在中间讲解页点击批注（高亮 mark），右侧批注栏不会定位到相应位置。
+- 走查结论（根因）：
+  1. `handleSelectMark` 复用了 `handleSelectAnnotation`，后者包含 `mark.scrollIntoView({ block: 'center' })` 平滑滚动中间。但点击的 mark 本就在当前视口内（否则用户点不到），中间无需滚动——这个多余滚动产生 scroll 事件流。
+  2. 长距离平滑滚动可能超过固定 800ms 兜底超时，`middleProgramScrollRef` 提前复位 → 中间滚动回显被当成用户滚动 → `handleMiddleScroll` 反向联动 `scrollRightToAnnotation` → **覆盖/干扰点击时右侧的定位**。
+- 修复内容（main 直接修复，`app/page.tsx`）：
+  1. `handleSelectMark`：命中批注时不再走 `handleSelectAnnotation`（不滚中间），只 `setSelectedAnnotation` + `scrollRightToAnnotation`（右侧定位）。
+  2. 程序滚动标志**续期加固**：`handleMiddleScroll` / `handleVisibleAnnotationChange` 在程序滚动进行中时续期复位定时器（滚动事件续期 300ms，滚动未停止不复位标志），长距离平滑滚动不会提前复位。
+  3. 兜底超时 800ms → 300ms（配合续期：滚动停止 300ms 后复位）。
+- 自检：tsc --noEmit 0 错误；lint 0 错误。
+- 负责：main
+
+---
+
+# 追加意见（2026-08-21 第三轮）
+
+## Q12. [已完成] 每次新提交批注，中间讲解页回滚到顶部（前端）
+- 现象/需求：用户反馈每次新提交一个批注，中间讲解页就回滚到最上面，阅读位置丢失。
+- 走查结论（根因，双因素叠加）：
+  1. **selection 失效自动滚动（主因）**：`ContentViewer.handleAnnotationSave` 保存后未清除浏览器原生 selection。提交后 `annotations` state 更新 → 高亮 effect 重跑 → `applyAnnotation` 用 `replaceChild` 替换用户刚选中区域的文本节点 → selection 的 anchorNode 脱离文档 → Chrome 自动滚动到 selection 计算位置（失效 → 顶部）→ 讲解页回滚到最上面。
+  2. **右侧 effect 非预期联动**：`AnnotationDetail` 的滚动监听 effect 依赖 `[reportVisible, annotations.length]`，提交批注后 `annotations.length` 变化 → effect 重跑 → mount 处立即 `reportVisible()` → `onVisibleAnnotationChange` → `scrollMiddleToAnnotation` → `scrollIntoView`，造成提交后讲解页非预期滚动。
+- 修复内容（main 直接修复）：
+  1. `components/content/ContentViewer.tsx`：`handleAnnotationSave` 保存后立即 `window.getSelection()?.removeAllRanges()`；高亮 effect 开头兜底——若 selection 的 anchorNode 落在内容区内先清除，覆盖所有高亮重应用路径（新增/删除/更新回复）。
+  2. `components/annotation/AnnotationDetail.tsx`：移除 effect 中 mount 时的主动 `reportVisible()`，effect 依赖收敛为 `[reportVisible]`（监听器只绑一次），反向联动完全由右侧滚动事件驱动，`annotations.length` 变化不再触发联动。
+- 自检：tsc --noEmit 0 错误；lint 0 错误。
+- 负责：main
+
+---
+
+# 追加意见（2026-08-21 第三轮）
+
+## Q11. [已完成] 讲解页与批注页的滚动跟随仍存在问题（前端）
+- 现象/需求：用户反馈中间讲解页与右侧批注页的双向滚动跟随仍不准确/抖动。
+- 走查结论（根因）：
+  1. Q9 的"回显目标抑制"依赖「程序滚动目标 == 视口顶线命中」匹配，但 `scrollIntoView`/`scrollBy` 是**居中滚动**（目标停在视口中央），而 `handleMiddleScroll`/`reportVisible` 的命中判定是「最后一个顶部在顶线 +60px 内的批注」——居中滚动结束后目标批注不在顶线附近（它上方的批注才在顶线），回显抑制不命中 → 反向联动 → **抖动循环**。
+  2. 顶线判定在批注稀疏时会把右侧跳到"已滚过顶线"的旧批注，跟随不准。
+- 修复内容（ux-dev 已关闭，由主 agent 直接修复）：
+  1. `app/page.tsx`：放弃"目标匹配抑制"，改用**程序滚动标志位抑制**——`middleProgramScrollRef`/`rightProgramScrollRef` 在程序滚动前置 true，滚动期间对侧联动一律忽略，`scrollend` + 800ms 超时兜底复位；与滚动时长彻底解耦。命中算法改为「视口内第一个可见批注」（与居中目标一致）。点击选中/点击 mark 同样走标志位。
+  2. `components/annotation/AnnotationDetail.tsx`：`reportVisible` 命中算法同步改为「视口内第一个可见批注项」。
+- 自检：read_lints 0 错误；tsc 待 qa-engineer 交叉验证。
+- 负责：main（原 ux-dev）
+
+---
+
+# 追加意见（2026-08-21 第二轮）
+
+## Q9. [已完成] 点击中间讲解页高亮批注 → 右侧批注页应滚动定位（前端）
+- 现象/需求：在中间讲解页点击笔记/问题高亮标记时，右侧批注详情应定位到对应批注项（反之点击右侧批注→中间定位已由 Q8 实现）。
+- 走查结论：Q8 中 `handleSelectMark` 点击中间 mark 只更新选中态 + 滚动中间，**未调用 `annotationDetailRef.current.scrollToAnnotation(id)`**，右侧列表不会滚动到对应项。属 Q8 遗留缺口。
+- 处理：在 `handleSelectAnnotation` 命中批注时补充 `annotationDetailRef.current?.scrollToAnnotation(id)`，同时 `scrollIntoView` 中间 mark。点击中间 mark 经 `handleSelectMark→handleSelectAnnotation` 复用，实现「点击中间高亮 → 右侧定位 + 中间居中 + 选中高亮」。
+- Q8 整体走查（三项均落实）：
+  1. 防循环改为**回显目标 id 抑制 + scrollend 复位**，替代原固定 400ms 防抖窗口，与滚动动画时长解耦：`lastRightSyncTargetRef` / `lastMiddleSyncTargetRef` 记录程序滚动目标，某侧滚动上报命中该 id 视为回显不再反向联动；中间容器 `scrollend` 复位 `lastMiddleSyncTargetRef`，右侧列表 `scrollend`（AnnotationDetail 新 prop `onScrollEnd`）复位 `lastRightSyncTargetRef`。彻底消除抖动循环，不再有"窗口过短提前复位"问题。
+  2. 右侧 `onVisibleAnnotationChange` 上报在 AnnotationDetail 内改为**尾部防抖 120ms**（`debounceTimerRef`），降低高频反向联动频率；`scrollend` 时补发最后一次上报保证终点准确。
+  3. 点击 mark 与文本选中（handleMouseUp 弹窗）互不冲突：mark 单击无文本选区，handleMouseUp 仅在有选区时弹窗；frontend-dev 的事件委托（onSelectMark）与选区弹窗分离，已确认。
+- 附带修复：Q9 合并残留导致 AnnotationDetail.tsx import 重复（8 处 Duplicate identifier），已删除重复 import。
+- 负责：ux-dev
+
+## Q10. [已完成] AI 回复处支持继续追加提问，问完自动折叠只留第一个回答（前端+后端协作）
+- 现象/需求：在右侧批注详情的 AI 解释位置可继续追加提问；问完后自动折叠，只保留 AI 的第一个回答。
+- 处理：
+  1. `components/annotation/AnnotationItem.tsx`：AI 回复区域增加"继续提问"入口（输入框 + 发送），提交后调用 AI 获取追加回答；追加问答历史在组件内维护（如 `followups: { question, answer }[]`）。（frontend-dev）
+  2. 追问完成（收到回答）后自动折叠：只显示第一条 AI 回答（现有 aiReply），追加的问答折叠收起（可展开查看），折叠状态默认收起。（frontend-dev）
+  3. 后端契约（backend-dev 确认并已扩展）：复用 `POST /api/ai/reply`，无需新增接口。追加提问需携带已有 `aiReply` 作为上下文（多轮连贯），后端已新增可选字段 `previousReply`：
+     - `app/api/ai/reply/route.ts`：body 增加可选 `previousReply` 并透传。
+     - `lib/ai/providers.ts` `replyToAnnotation`：新增第 6 个可选参数 `previousReply?: string`，非空时作为 `assistant` 消息注入 prompt（`AI 上一轮的回答：...`），作为追加提问前置上下文。
+     - 契约：`POST /api/ai/reply`，body 形如 `{ body: 追加问题, type, quote, annotationId, contentHtml, provider, previousReply: 现有 aiReply }`；previousReply 可缺省（首次提问不带）。
+  4. 流式/非流式：与现有 ai/reply 非流式保持一致。
+- 负责：frontend-dev（组件）；backend-dev（后端契约扩展）
+- 后端自检：tsc --noEmit 0 错误、lint 0 诊断。2026-08-21 完成
+- 前端组件（已完成 2026-08-21，frontend-dev）：`components/annotation/AnnotationItem.tsx`
+  1. AI 回复展开区域新增"继续提问"入口（Input + 发送按钮 + Enter 保存，Shift/输入法组合放行），提交后调用 `POST /api/ai/reply`（body=追加问题、type、quote、annotationId、contentHtml、provider、`previousReply`=优先最近一次追问回答否则 `annotation.aiReply`）。
+  2. 追加问答历史在组件内维护（`followups: { question, answer }[]`）；收到回答后自动折叠（`setIsFollowupsCollapsed(true)`），只显示第一条 AI 回答（现有 aiReply），追加问答以"追加问答（N）"按钮折叠展示（默认收起），与现有 `isReplyCollapsed` 不冲突。
+  3. 加载/错误状态复用 fetchAiReply 模式（isLoadingFollowup Loader2 + followupError 红字）。
+  4. 自检：`AnnotationItem.tsx` tsc/lint 均 0 诊断。（注：整体 `tsc --noEmit` 仍报 ux-dev 负责的 `AnnotationDetail.tsx` 重复 import 错误，已通知 ux-dev 处理。）
+
+
+  1讲解页和批注页的跟随还是有问题，在批注页点击问题讲解页可以自动定位，反过来还是不行
+  2.在讲解页提问的时候 如果文字靠左 提问框会被遮挡部分 需要往右边移动
+  3.为什么刷新页面内容就没了
+
+---
+
+# 追加记录（2026-08-21 第四轮）
+
+## Q14. [已完成] 点击中间讲解页高亮批注，右侧批注栏仍不定位（前端）
+- 现象/需求：第三轮反馈"在批注页点击问题讲解页可以自动定位，反过来还是不行"——在中间讲解页点击高亮批注（mark），右侧批注栏不能定位到对应批注项。Q13 已改 `handleSelectMark` 不滚中间、只 `setSelectedAnnotation + scrollRightToAnnotation`，但仍不定位。
+- 走查结论（根因，Q13 修复后残留）：
+  1. `handleSelectMark` 里 `setSelectedAnnotation` 与 `scrollRightToAnnotation` **同步连发**：`scrollToAnnotation` 在**选中态尚未渲染的旧 DOM** 上计算 delta（偏移量不准）；且 `setSelectedAnnotation` 会触发讲解页高亮重应用 + 批注列表选中样式更新，这些 DOM 变更在重渲染瞬间可能产生**伪 scroll 事件**。
+  2. 由于 `handleSelectMark` 只置 `rightProgramScrollRef`、**未抑制中间联动**（`middleProgramScrollRef` 为 false），讲解页重渲染引发的伪 scroll 会被 `handleMiddleScroll` 当成"用户滚动"，反向调用 `scrollRightToAnnotation(activeId)` **重入覆盖**点击时对右侧的定位，常滚到当前视口首条批注而非点击的那条 → 右侧"不定位"。
+- 修复内容（ux-dev，`app/page.tsx`）：
+  1. 新增 `pendingRightScrollRafRef` 与 `scheduleRightScrollAfterRender(id)`：点击中间 mark 时**延迟到选中态重渲染落定后（requestAnimationFrame）**再执行 `scrollRightToAnnotation`，在稳定的 DOM 上精确滚动右侧到目标批注。
+  2. `handleSelectMark` 命中批注时，在重渲染窗口（300ms 定时）内**临时置 `middleProgramScrollRef` 与 `rightProgramScrollRef`**，抑制讲解页/批注列表重渲染瞬间的伪 scroll 事件被反向联动误判，避免重入覆盖；超时/scrollend 正常复位，双向滚动跟随不受影响（右侧/中间手动滚动路径 `handleSelectAnnotation`、`handleVisibleAnnotationChange` 未改动）。
+  3. 卸载清理逻辑补 `cancelAnimationFrame`。
+- 自检：`tsc --noEmit` 0 错误；read_lints 0 诊断。
+- 负责：ux-dev
+
+## Q15. [已完成] 中间讲解页选中靠左文字时 AnnotationPopup 被视口遮挡（前端）
+- 现象/需求：在中间讲解页选中靠左的文字时，批注输入弹窗（AnnotationPopup）被视口左边缘遮挡一部分，需要往右移动。
+- 走查结论（根因）：弹窗用 `w-80`（320px）宽度，并通过 `left: position.x` + `transform: translateX(-50%)` 相对选中位置水平居中。选中文字靠左时 `position.x` 很小，居中（左移 160px）会把弹窗推出视口左侧被遮挡；右侧同理。
+- 修复内容（frontend-dev，`components/content/AnnotationPopup.tsx`）：
+  1. 新增 `POPUP_WIDTH = 320`、`HORIZONTAL_MARGIN = 8`。
+  2. 计算 `effectiveLeft`：先按居中语义算出期望左边缘 `position.x - POPUP_WIDTH/2`，再 clamp 到 `[8, viewportWidth - POPUP_WIDTH - 8]` 区间内，最后反推"视觉居中等效"的 `left` 值（clamp 后的左边缘 + 半宽）。样式 `left` 改用 `effectiveLeft`，居中 `translateX(-50%)` 布局保持不变，仅在选中点靠近视口边缘时水平平移至视口内，不再溢出。
+  3. 竖直方向（isNearBottom 上下弹出）逻辑未改动。
+- 自检：`tsc --noEmit` 0 错误；read_lints 0 诊断。
+- 负责：frontend-dev
