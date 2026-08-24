@@ -3,19 +3,23 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
 
 const DB_PATH = process.env.DATABASE_PATH || './local.db'
-console.log('Database: Initializing at', DB_PATH)
 
-const sqlite = new Database(DB_PATH)
-sqlite.pragma('journal_mode = WAL')
+// 惰性初始化：模块加载时（含 Next.js build 收集路由）不打开数据库，
+// 首次真正使用时才创建连接并建表。避免 build worker 中 better-sqlite3 SIGSEGV。
+let dbInstance: ReturnType<typeof createDb> | null = null
 
-// 禁用外键约束
-sqlite.pragma('foreign_keys = OFF')
+function createDb() {
+  console.log('Database: Initializing at', DB_PATH)
 
-export const db = drizzle(sqlite, { schema })
+  const sqlite = new Database(DB_PATH)
+  sqlite.pragma('journal_mode = WAL')
 
-export function initDatabase() {
+  // 禁用外键约束
+  sqlite.pragma('foreign_keys = OFF')
+
+  const db = drizzle(sqlite, { schema })
+
   console.log('Database: Creating tables...')
-
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
@@ -55,8 +59,14 @@ export function initDatabase() {
       created_at INTEGER
     );
   `)
-
   console.log('Database: Tables created successfully')
+
+  return db
 }
 
-initDatabase()
+export function getDb() {
+  if (!dbInstance) {
+    dbInstance = createDb()
+  }
+  return dbInstance
+}

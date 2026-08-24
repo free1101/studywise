@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { getDb } from '@/lib/db'
 import { contents } from '@/lib/schema'
 import { v4 as uuidv4 } from 'uuid'
 
 // POST: 创建内容
 export async function POST(request: Request) {
   try {
+    const db = getDb()
     console.log('Contents API: Received request')
     let body: Record<string, unknown>
     try {

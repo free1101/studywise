@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { generateSummary } from '@/lib/ai/providers'
-import { db } from '@/lib/db'
+import { getDb } from '@/lib/db'
 import { summaries } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function POST(request: Request) {
   try {
+    const db = getDb()
     const { annotations, contentHtml, sessionId, provider } = await request.json()
 
     if (!annotations || !Array.isArray(annotations) || annotations.length === 0) {

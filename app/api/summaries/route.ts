@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { getDb } from '@/lib/db'
 import { summaries } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 
 export async function GET(request: Request) {
   try {
+    const db = getDb()
     const { searchParams } = new URL(request.url)
     const sessionId = searchParams.get('sessionId')
 

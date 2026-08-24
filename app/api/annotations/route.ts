@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { getDb } from '@/lib/db'
 import { annotations } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid'
 // GET: 获取批注列表
 export async function GET(request: Request) {
   try {
+    const db = getDb()
     const { searchParams } = new URL(request.url)
     const contentId = searchParams.get('contentId')
 
@@ -38,6 +39,7 @@ export async function GET(request: Request) {
 // POST: 创建批注
 export async function POST(request: Request) {
   try {
+    const db = getDb()
     const body = await request.json()
     const { contentId, quote, quoteOffset, quoteLength, type, body: annotationBody } = body
 

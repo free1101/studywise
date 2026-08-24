@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { getDb } from '@/lib/db'
 import { annotations } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 
@@ -9,6 +9,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const db = getDb()
     const { id } = await params
     const body = await request.json()
     const { body: annotationBody, type, aiReply, color } = body
@@ -53,6 +54,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const db = getDb()
     const { id } = await params
 
     await db.delete(annotations).where(eq(annotations.id, id))
