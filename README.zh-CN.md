@@ -1,5 +1,9 @@
 # StudyWise
 
+<p align="center">
+  🌐 <a href="README.md">English</a> | <b>简体中文</b>
+</p>
+
 > **AI 学习批注助手** — 与 AI 对话生成学习内容，选中文字添加笔记/问题，AI 即时结合上下文解答，学完自动生成总结与复习题，支持导出离线 HTML。
 
 > 🇺🇸 **English version** is available at [README.md](README.md).
@@ -49,7 +53,7 @@
 
 ### 前置要求
 
-- **Node.js 20+**（在 Node 20 上开发与测试）
+- **Node.js 20+**（CI 运行于 Node 24；在 Node 20/24 上开发与测试）
 - npm（随 Node 内置）
 - 任一 OpenAI 兼容 AI 提供商的 API Key（推荐火山引擎方舟）
 
@@ -79,9 +83,18 @@ cp .env.example .env.local
 | `VOLCENGINE_API_KEY` | 火山引擎方舟 API Key | [火山引擎方舟控制台](https://console.volcengine.com/ark) |
 | `VOLCENGINE_ENDPOINT` | API 端点（已预填） | 无需修改 |
 | `VOLCENGINE_MODEL` | 模型名（已预填） | 无需修改 |
+| `OPENAI_API_KEY` | OpenAI（或任意 OpenAI 兼容端点）API Key | [OpenAI platform](https://platform.openai.com) |
+| `OPENAI_BASE_URL` | OpenAI 兼容端点地址（已预填） | 无需修改 |
+| `OPENAI_MODEL` | 模型名（已预填） | 无需修改 |
+| `CLAUDE_API_KEY` | Anthropic Claude API Key（`ANTHROPIC_API_KEY` 亦可） | [Anthropic console](https://console.anthropic.com) |
+| `CLAUDE_BASE_URL` | Anthropic OpenAI 兼容端点（已预填） | 无需修改 |
+| `CLAUDE_MODEL` | Claude 模型名（已预填） | 无需修改 |
 | `DEFAULT_AI_PROVIDER` | 默认提供商：`volcengine` / `openai` / `claude` | 默认 `volcengine` |
 
-> **任意 OpenAI 兼容提供商** — `provider` 字段支持 `volcengine`、`openai`、`claude`。使用 OpenAI 兼容端点时，将 `DEFAULT_AI_PROVIDER` 设为 `openai`（或在应用内状态栏选择提供商），并在 `.env.local` 中配置对应的 `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`。
+> **三种提供商，一键切换** — 通过 `DEFAULT_AI_PROVIDER` 或在应用内状态栏切换：
+> - `volcengine` — 火山引擎方舟（DeepSeek，国内用户推荐）
+> - `openai` — OpenAI 官方或**任意 OpenAI 兼容端点**（DeepSeek 官方、通义千问、Kimi、GLM、Ollama 等，将 `OPENAI_BASE_URL` 指向即可）
+> - `claude` — Anthropic Claude（走官方 OpenAI 兼容端点）
 
 ### 4. 启动开发服务器
 

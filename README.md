@@ -1,5 +1,9 @@
 # StudyWise
 
+<p align="center">
+  🌐 <b>English</b> | <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 > **AI-powered learning annotation assistant** — Chat with AI to generate study content, annotate any text, get instant AI answers, and review with auto-generated summaries and quizzes.
 
 > 🇨🇳 **中文简介**：StudyWise 是一款 AI 学习批注助手。与 AI 对话生成学习内容，选中文字添加笔记/问题，AI 即时结合上下文解答，学完自动生成总结与复习题，并支持导出离线 HTML。数据全部本地存储（SQLite），自带 API Key 即可使用。完整中文文档见 [README.zh-CN.md](README.zh-CN.md)。
