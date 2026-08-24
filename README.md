@@ -83,9 +83,18 @@ cp .env.example .env.local
 | `VOLCENGINE_API_KEY` | Volcengine Ark API key | [Volcengine Ark console](https://console.volcengine.com/ark) |
 | `VOLCENGINE_ENDPOINT` | API endpoint (pre-filled) | Leave as-is |
 | `VOLCENGINE_MODEL` | Model name (pre-filled) | Leave as-is |
+| `OPENAI_API_KEY` | OpenAI (or any OpenAI-compatible endpoint) API key | [OpenAI platform](https://platform.openai.com) |
+| `OPENAI_BASE_URL` | OpenAI-compatible endpoint URL (pre-filled) | Leave as-is |
+| `OPENAI_MODEL` | Model name (pre-filled) | Leave as-is |
+| `CLAUDE_API_KEY` | Anthropic Claude API key (`ANTHROPIC_API_KEY` also works) | [Anthropic console](https://console.anthropic.com) |
+| `CLAUDE_BASE_URL` | Anthropic OpenAI-compatible endpoint (pre-filled) | Leave as-is |
+| `CLAUDE_MODEL` | Claude model name (pre-filled) | Leave as-is |
 | `DEFAULT_AI_PROVIDER` | Default provider: `volcengine` / `openai` / `claude` | Default `volcengine` |
 
-> **Any OpenAI-compatible provider** — the `provider` field accepts `volcengine`, `openai`, or `claude`. For OpenAI-compatible endpoints, set `DEFAULT_AI_PROVIDER=openai` (or choose the provider in the in-app status bar) and configure the corresponding `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` in `.env.local`.
+> **Three providers, one click** — switch via `DEFAULT_AI_PROVIDER` or the in-app status bar:
+> - `volcengine` — Volcengine Ark (DeepSeek, recommended for CN users)
+> - `openai` — OpenAI official or **any OpenAI-compatible endpoint** (DeepSeek official, Qwen, Kimi, GLM, Ollama, etc. — just point `OPENAI_BASE_URL` at it)
+> - `claude` — Anthropic Claude via the official OpenAI-compatible endpoint
 
 ### 4. Start the dev server
 

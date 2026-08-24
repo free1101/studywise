@@ -3,8 +3,26 @@ import OpenAI from 'openai'
 
 export type AIProvider = 'volcengine' | 'openai' | 'claude'
 
+// 各 Provider 的运行时配置（全部支持环境变量覆盖）
+const PROVIDER_CONFIG: Record<'openai' | 'claude', { apiKey: string; baseURL: string; model: string }> = {
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+    // 任意 OpenAI 兼容端点都可接入：OpenAI 官方、DeepSeek 官方、通义千问、Kimi、Ollama 等
+    baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+  },
+  claude: {
+    // CLAUDE_API_KEY 与 ANTHROPIC_API_KEY 二选一（后者为兼容别名）
+    apiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || '',
+    // Anthropic 官方 OpenAI 兼容端点
+    baseURL: process.env.CLAUDE_BASE_URL || 'https://api.anthropic.com/v1',
+    model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+  },
+}
+
 export function getDefaultProvider(): AIProvider {
-  return (process.env.DEFAULT_AI_PROVIDER as AIProvider) || 'volcengine'
+  const provider = process.env.DEFAULT_AI_PROVIDER
+  return provider === 'openai' || provider === 'claude' ? provider : 'volcengine'
 }
 
 function getClient(provider: AIProvider): OpenAI {
@@ -12,10 +30,13 @@ function getClient(provider: AIProvider): OpenAI {
     case 'volcengine':
       return createVolcengineClient()
     case 'openai':
+    case 'claude': {
+      const cfg = PROVIDER_CONFIG[provider]
       return new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-        baseURL: 'https://api.openai.com/v1',
+        apiKey: cfg.apiKey,
+        baseURL: cfg.baseURL,
       })
+    }
     default:
       return createVolcengineClient()
   }
@@ -26,7 +47,8 @@ function getModel(provider: AIProvider): string {
     case 'volcengine':
       return VOLCENGINE_MODEL
     case 'openai':
-      return 'gpt-4o-mini'
+    case 'claude':
+      return PROVIDER_CONFIG[provider].model
     default:
       return VOLCENGINE_MODEL
   }
