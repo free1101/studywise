@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  ci:
+    name: Lint, Typecheck, Test & Build
+    runs-on: ubuntu-latest
+    env:
+      # 无真实 API Key 的干净环境占位，确保 next build 可成功构建。
+      # 运行时值仍通过 .env.local 提供，此处仅保证 CI 构建不因缺少 key 失败。
+      DEFAULT_AI_PROVIDER: volcengine
+      VOLCENGINE_API_KEY: ci-placeholder-key
+      VOLCENGINE_ENDPOINT: https://ark.cn-beijing.volces.com/api/plan/v3
+      VOLCENGINE_MODEL: deepseek-v4-flash
+      OPENAI_API_KEY: ci-placeholder-key
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Typecheck
+        run: node node_modules/typescript/lib/tsc.js --noEmit
+
+      - name: Frontend logic tests
+        run: node scripts/frontend-logic-test.mjs
+
+      - name: Build
+        run: npm run build
