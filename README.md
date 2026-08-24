@@ -53,7 +53,7 @@
 
 ### Prerequisites
 
-- **Node.js 20+** (developed and tested on Node 20)
+- **Node.js 20+** (CI runs on Node 24; developed and tested on Node 20/24)
 - npm (bundled with Node)
 - An API key from an OpenAI-compatible AI provider (Volcengine Ark recommended)
 
