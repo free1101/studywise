@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "AI-powered learning annotation assistant. Select text, add notes/questions, get instant AI replies.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="zh-CN"
